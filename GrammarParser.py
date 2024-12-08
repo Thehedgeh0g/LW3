@@ -1,8 +1,5 @@
-import os
 import re
 from collections import defaultdict
-
-from jinja2.nodes import Output
 
 
 class GrammarToNFA:
