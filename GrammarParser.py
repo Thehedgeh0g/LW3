@@ -2,12 +2,15 @@ import os
 import re
 from collections import defaultdict
 
+from jinja2.nodes import Output
+
+
 class GrammarToNFA:
-    def __init__(self, grammar_type="right"):
+    def __init__(self, grammar_type="right", regex = r"^\s*<(\w+)>\s*->\s*((?:<\w+>\s+)?\w(?:\s*\|\s*(?:<\w+>\s+)?\w)*)\s*$"):
         self.grammar_type = grammar_type
         self.rules = defaultdict(list)
         self.start_symbol = None
-        self.regex = r"^\s*<(\w+)>\s*->\s*((?:<\w+>\s+)?\w(?:\s*\|\s*(?:<\w+>\s+)?\w)*)\s*$"
+        self.regex = regex
 
     def parse_grammar(self, grammar_lines):
         for line in grammar_lines:
@@ -48,8 +51,10 @@ class GrammarToNFA:
 
                         nfa[state_map[non_terminal]].append((terminal, state_map[next_non_terminal]))
                     else:
-                        nfa[state_map[non_terminal]].append((production, "ε"))
-                        final_states.add(state_map[non_terminal])
+                        if (len(final_states) == 0):
+                            state_map["F"] = get_new_state()
+                            final_states.add(state_map["F"])
+                        nfa[state_map[non_terminal]].append((production, state_map["F"]))
                 elif self.grammar_type == "left":
                     if "<" in production:
                         next_non_terminal, terminal = production.split()
@@ -60,24 +65,33 @@ class GrammarToNFA:
 
                         nfa[state_map[non_terminal]].append((terminal, state_map[next_non_terminal]))
                     else:
-                        nfa[state_map[non_terminal]].append((production, "ε"))
-                        final_states.add(state_map[non_terminal])
+                        if (len(final_states) == 0):
+                            state_map["F"] = get_new_state()
+                            final_states.add(state_map["F"])
+                        nfa[state_map[non_terminal]].append((production, state_map["F"]))
 
         return nfa, state_map, final_states
 
     def to_transition_table(self, nfa, state_map, final_states):
         states = sorted(state_map.values())
-        states.append('q'+str(len(states)))
         inputs = sorted({symbol[0] for state in nfa.values() for symbol in state})
         table = defaultdict(lambda: [""] * len(states))
 
         for state, transitions in nfa.items():
             for symbol, next_state in transitions:
                 if (next_state == 'ε'):
-                    next_state = 'q'+str(len(states)-1)
+                    next_state = state
                 table[symbol][states.index(state)] += ("," if table[symbol][states.index(state)] else "") + next_state
 
-        output = [f";{';'.join(states)}"]
+        final_state_indexes = {}
+        for final_state in final_states:
+            final_state_indexes[states.index(final_state)] = final_state
+        print(final_states)
+        print(final_state_indexes)
+        final_string = ''
+        for index in sorted(final_state_indexes):
+            final_string += (';'*(index-len(final_string))+'F')
+        output = [f";{final_string}", f";{';'.join(states)}"]
         for symbol in inputs:
             row = f"{symbol[0]};" + ";".join(table[symbol[0]])
             output.append(row)

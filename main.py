@@ -1,4 +1,3 @@
-import subprocess
 import sys
 import argparse
 import re
@@ -40,11 +39,6 @@ def generate_input_for_mealy(nfa):
         rows.append(";".join(row))
     return f";{';'.join(states)}\n" + "\n".join(rows)
 
-def process_with_mealy_minimizer(data, output_file="mealy_output.csv"):
-    save_to_file(data, "input_mealy.csv")
-    subprocess.run(["python", "moore_minimizer.py"], check=True)
-    #os.rename("out1.csv", output_file)
-
 def read_grammar(file_path):
     with open(file_path, "r") as file:
         input_data = re.sub(r"\n\s+\|", " |", file.read().strip()).split('\n')
@@ -60,12 +54,17 @@ def determine_grammar_type(grammar_rules):
             return GRAMMAR_TYPE_LEFT
     throw_error('invalid grammar')
 
+
+
 if __name__ == "__main__":
     parser = createParser()
     namespace = parser.parse_args (sys.argv[1:])
     grammar = read_grammar(namespace.inPath)
-    converter = GrammarToNFA(grammar_type=determine_grammar_type(grammar))
+    grammar_type = determine_grammar_type(grammar)
+    regex = LEFT_GRAMMAR_PATTERN if grammar_type == 'left' else RIGHT_GRAMMAR_PATTERN
+    converter = GrammarToNFA(grammar_type=grammar_type, regex=regex)
     converter.parse_grammar(grammar)
     nfa, state_map, final_states = converter.to_nfa()
     table = converter.to_transition_table(nfa, state_map, final_states)
-    print(table)
+    save_to_file(table, namespace.outPath)
+    # print(table)
