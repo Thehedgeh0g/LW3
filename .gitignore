@@ -1,0 +1,8 @@
+.idea
+lib
+graph.html
+in.csv
+input_mealy.csv
+mealy_output.csv
+mealy_minimizer.py
+moore_minimizer.py
